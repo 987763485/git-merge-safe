@@ -130,7 +130,7 @@ fn full_example_rules_end_to_end() {
         "docs/**            merge=ours\n\
          AGENTS.md          merge=ours\n\
          CLAUDE.md          merge=ours\n\
-         .cualde/**         merge=ours\n\
+         .claude/**         merge=ours\n\
          .comet/**          merge=ours\n\
          .superpowers/**    merge=ours\n\
          .impeccable/**     merge=ours\n\

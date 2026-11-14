@@ -130,7 +130,7 @@ git clone --mirror <remote-url> filtered.git
 cd filtered.git
 git filter-repo --refs main --invert-paths \
   --path docs --path AGENTS.md --path CLAUDE.md \
-  --path .cualde --path .comet --path .superpowers --path .impeccable
+  --path .claude --path .comet --path .superpowers --path .impeccable
 # 注意：--path docs 会把 docs/index.html 一起删掉；例外路径的处理见下一条。
 ```
 
@@ -319,7 +319,7 @@ rm -f "$(git rev-parse --git-path merge-safe.lock)"
 24. 线性历史且与源分支有共同起点：通过环境检查。
 25. 成功路径和每一条失败路径结束后，源分支 SHA 不变。
 26. 源分支在另一个 worktree 检出时，运行成功且该 worktree 的内容与 HEAD 不被改动。
-27. 规则采用完整示例（`docs/**`、`AGENTS.md`、`CLAUDE.md`、`.cualde/**`、`.comet/**`、`.superpowers/**`、`.impeccable/**` 为 `merge=ours`）：这些路径被删除。
+27. 规则采用完整示例（`docs/**`、`AGENTS.md`、`CLAUDE.md`、`.claude/**`、`.comet/**`、`.superpowers/**`、`.impeccable/**` 为 `merge=ours`）：这些路径被删除。
 28. `docs/index.html -merge`：该文件保留，其余 `docs/` 路径被删除，`docs/` 目录因仍有文件而保留。
 29. `-merge` 的路径在 main 与 dev 都修改时按普通文件冲突并整体回滚，不静默处理。
 30. 仓库没有配置 `merge.ours.driver` 时，工具仍零冲突完成，且运行后 git config 不变。

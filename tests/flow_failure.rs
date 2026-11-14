@@ -35,6 +35,27 @@ fn conflict_fixture() -> TestRepo {
 }
 
 #[test]
+fn empty_message_is_rejected_before_changes() {
+    let repo = conflict_fixture();
+    let head = repo.rev("HEAD");
+    let src = repo.rev("dev");
+
+    let out = repo.bin().args(["-m", "   "]).output().unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    assert!(
+        stderr(&out).contains("--message 不能为空"),
+        "{}",
+        stderr(&out)
+    );
+    assert_eq!(repo.rev("HEAD"), head);
+    assert_eq!(repo.rev("dev"), src);
+    assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
+}
+
+#[test]
 fn non_excluded_conflict_rolls_back() {
     let repo = conflict_fixture();
     let head = repo.rev("HEAD");

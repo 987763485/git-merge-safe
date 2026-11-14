@@ -6,7 +6,7 @@
 
 ## 1. 范围
 
-- **会被移除**：`merge=ours` 标记的路径，例如 `docs/`、`AGENTS.md`、`CLAUDE.md`、`.cualde/`、`.comet/`、`.superpowers/`、`.impeccable/`。清单由命令行的 `--exclude` 显式给出，脚本不会自行解析 `.gitattributes`。
+- **会被移除**：`merge=ours` 标记的路径，例如 `docs/`、`AGENTS.md`、`CLAUDE.md`、`.claude/`、`.comet/`、`.superpowers/`、`.impeccable/`。清单由命令行的 `--exclude` 显式给出，脚本不会自行解析 `.gitattributes`。
 - **会被保留**：`-merge` 取消标记的例外路径，例如 `docs/index.html`，通过 `--keep` 给出（精确文件路径）。
 - **不处理**：`dev` 的历史与内容、远端平台的 PR 引用与缓存对象、未通过 `--tag` 指定的标签。
 
@@ -25,7 +25,7 @@ git clone --mirror <remote-url> work.git
 ```bash
 sh scripts/purge-main-history.sh --repo work.git \
   --exclude docs --exclude AGENTS.md --exclude CLAUDE.md \
-  --exclude .cualde --exclude .comet --exclude .superpowers --exclude .impeccable \
+  --exclude .claude --exclude .comet --exclude .superpowers --exclude .impeccable \
   --keep docs/index.html --check
 ```
 

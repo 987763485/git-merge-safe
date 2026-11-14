@@ -519,7 +519,7 @@ git commit -m "feat: add read-only git queries"
 docs/**            merge=ours
 AGENTS.md          merge=ours
 CLAUDE.md          merge=ours
-.cualde/**         merge=ours
+.claude/**         merge=ours
 .comet/**          merge=ours
 .superpowers/**    merge=ours
 .impeccable/**     merge=ours

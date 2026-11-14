@@ -182,3 +182,27 @@ fn no_rules_merges_normally() {
     );
     assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
 }
+
+#[test]
+fn custom_message_is_used() {
+    let repo = TestRepo::new();
+    repo.write(".gitattributes", "docs/** merge=ours\n");
+    repo.write("plain.txt", "p\n");
+    repo.commit_all("base");
+    repo.checkout_new("dev");
+    repo.write("docs/a.md", "a\n");
+    repo.write("plain.txt", "p-dev\n");
+    repo.commit_all("dev");
+    repo.checkout("main");
+
+    let out = repo
+        .bin()
+        .args(["-m", "release: 2026-11-15", "-m", "squash dev"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(
+        repo.git_ok(&["log", "-1", "--format=%B"]),
+        "release: 2026-11-15\n\nsquash dev"
+    );
+}

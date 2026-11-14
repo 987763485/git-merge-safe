@@ -58,7 +58,7 @@ Git 会自动把 `git merge-safe` 解析为 `PATH` 中的 `git-merge-safe`，无
 docs/**            merge=ours
 AGENTS.md          merge=ours
 CLAUDE.md          merge=ours
-.cualde/**         merge=ours
+.claude/**         merge=ours
 .comet/**          merge=ours
 .superpowers/**    merge=ours
 .impeccable/**     merge=ours
@@ -106,6 +106,9 @@ git merge-safe [选项]
 
 选项：
   --source <branch>   源分支，默认 dev
+  -m, --message <message>
+                      提交信息；可重复指定，多段之间以空行分隔
+                      默认：merge <source> (squash) without excluded paths
   --dry-run           预览将被移除的路径，不做任何修改
   --keep-temp         成功后保留临时分支，便于排查
   --verbose           输出每条 Git 命令及其退出码

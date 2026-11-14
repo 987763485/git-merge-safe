@@ -79,7 +79,7 @@
   docs/**            merge=ours
   AGENTS.md          merge=ours
   CLAUDE.md          merge=ours
-  .cualde/**         merge=ours
+  .claude/**         merge=ours
   .comet/**          merge=ours
   .superpowers/**    merge=ours
   .impeccable/**     merge=ours
@@ -124,7 +124,7 @@
   - main 与 dev 的共同起点本身不含这些路径。
 - 执行前做完整备份（镜像仓库或等价物）。
 - 若 main 上有 tag 指向被重写的提交，一并处理，否则 tag 仍可检索到旧路径。
-- 清理路径清单必须按当前规则完整生成（示例里是 docs、AGENTS.md、CLAUDE.md、.cualde、.comet、.superpowers、.impeccable），不能只写 docs 和 AGENTS.md。
+- 清理路径清单必须按当前规则完整生成（示例里是 docs、AGENTS.md、CLAUDE.md、.claude、.comet、.superpowers、.impeccable），不能只写 docs 和 AGENTS.md。
 - 规则里用 `-merge` 取消的路径不属于排除路径，清理时不能被一起删掉；例如按目录删 `docs/` 会误删 `docs/index.html`。清理必须按文件判定，并在验证步骤确认这些例外路径仍然存在。
 - 验证：`git log main -- <排除路径>` 为空；除这些路径外，main 的内容与清理前一致；`git merge-base main dev` 与 `git rev-parse dev` 与清理前一致。
 - 推送只针对 main，禁止 `--all`、`--mirror`。
@@ -203,7 +203,7 @@
 # docs/**            merge=ours
 # AGENTS.md          merge=ours
 # CLAUDE.md          merge=ours
-# .cualde/**         merge=ours
+# .claude/**         merge=ours
 # .comet/**          merge=ours
 # .superpowers/**    merge=ours
 # .impeccable/**     merge=ours

@@ -17,6 +17,9 @@ fn main() {
 }
 
 fn run(cli: &Cli) -> Result<()> {
+    if cli.message.iter().any(|m| m.trim().is_empty()) {
+        return Err(Failure::Preflight(anyhow::anyhow!("--message 不能为空")));
+    }
     let (ctx, lock) = preflight::check(cli, cli.dry_run)?;
     if cli.dry_run {
         dry_run::run(&ctx, cli)?;

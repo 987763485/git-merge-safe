@@ -39,7 +39,7 @@ fn execute(ctx: &Ctx, cli: &Cli) -> anyhow::Result<()> {
     let git = &ctx.git;
     let tmp = unique_temp_branch(git)?;
 
-    let step = match prepare(git, ctx, &tmp) {
+    let step = match prepare(git, ctx, cli, &tmp) {
         Ok(step) => step,
         Err(e) => {
             return match rollback(git, &ctx.cur, &ctx.head0, &tmp) {
@@ -101,7 +101,7 @@ fn execute(ctx: &Ctx, cli: &Cli) -> anyhow::Result<()> {
     }
 }
 
-fn prepare(git: &Git, ctx: &Ctx, tmp: &str) -> anyhow::Result<Step> {
+fn prepare(git: &Git, ctx: &Ctx, cli: &Cli, tmp: &str) -> anyhow::Result<Step> {
     git.ok(git.run_str(&["switch", "-c", tmp])?)?;
 
     let attrs_dir = git.abs_git_path("merge-safe")?;
@@ -177,7 +177,7 @@ fn prepare(git: &Git, ctx: &Ctx, tmp: &str) -> anyhow::Result<Step> {
         return Ok(Step::NoContent);
     }
 
-    let message = format!("merge {} (squash) without excluded paths", ctx.src);
+    let message = commit_message(ctx, cli);
     git.ok(git.run_str(&["commit", "-q", "-m", &message])?)?;
 
     let tree_paths = git.ls_tree_z(tmp)?;
@@ -190,6 +190,14 @@ fn prepare(git: &Git, ctx: &Ctx, tmp: &str) -> anyhow::Result<Step> {
     }
 
     Ok(Step::Done(excluded))
+}
+
+fn commit_message(ctx: &Ctx, cli: &Cli) -> String {
+    if cli.message.is_empty() {
+        format!("merge {} (squash) without excluded paths", ctx.src)
+    } else {
+        cli.message.join("\n\n")
+    }
 }
 
 fn removal_set(git: &Git) -> anyhow::Result<Vec<Vec<u8>>> {

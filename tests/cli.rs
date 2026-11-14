@@ -9,7 +9,13 @@ fn help_lists_all_options() {
         .unwrap();
     assert!(out.status.success());
     let text = String::from_utf8_lossy(&out.stdout);
-    for flag in ["--source", "--dry-run", "--keep-temp", "--verbose"] {
+    for flag in [
+        "--source",
+        "--message",
+        "--dry-run",
+        "--keep-temp",
+        "--verbose",
+    ] {
         assert!(text.contains(flag), "missing {flag} in:\n{text}");
     }
 }
