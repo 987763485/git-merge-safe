@@ -190,6 +190,7 @@ fn hook_leaving_untracked_file_rolls_back() {
     assert!(stderr(&out).contains("工作区不干净"), "{}", stderr(&out));
     assert_eq!(repo.rev("HEAD"), head);
     assert_eq!(repo.git_ok(&["ls-files", "-s"]), index);
+    assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
     assert!(repo
         .git_ok(&["branch", "--list", "merge-safe/*"])
         .is_empty());

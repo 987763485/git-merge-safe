@@ -46,4 +46,24 @@ if (cd "$tmp/agents" && sh "$script" main) >"$tmp/out2" 2>&1; then
 fi
 grep -q 'AGENTS.md' "$tmp/out2"
 
+# fail: space in a path
+mk "$tmp/space"
+echo "docs/** merge=ours" > "$tmp/space/.gitattributes"
+mkdir -p "$tmp/space/docs"; echo s > "$tmp/space/docs/space name.md"
+git -C "$tmp/space" add -A; git -C "$tmp/space" commit -qm base
+if (cd "$tmp/space" && sh "$script" main) >"$tmp/out-space" 2>&1; then
+  echo "expected failure for space path"; cat "$tmp/out-space"; exit 1
+fi
+grep -q 'space name.md' "$tmp/out-space"
+
+# fail: non-ASCII path
+mk "$tmp/nonascii"
+echo "docs/** merge=ours" > "$tmp/nonascii/.gitattributes"
+mkdir -p "$tmp/nonascii/docs"; echo u > "$tmp/nonascii/docs/文档.md"
+git -C "$tmp/nonascii" add -A; git -C "$tmp/nonascii" commit -qm base
+if (cd "$tmp/nonascii" && sh "$script" main) >"$tmp/out-na" 2>&1; then
+  echo "expected failure for non-ASCII path"; cat "$tmp/out-na"; exit 1
+fi
+grep -q '文档.md' "$tmp/out-na"
+
 echo "check-main tests passed"

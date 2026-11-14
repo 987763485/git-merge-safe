@@ -54,6 +54,22 @@ printf '%s' "$excludes" > "$tmp/excludes"
 printf '%s' "$keeps" > "$tmp/keeps"
 printf '%s' "$tags" > "$tmp/tags"
 
+# Print the paths in commit $2 of repo $1 that fall under the exclude set but
+# are not --keep exceptions. One per line.
+nonkept_paths() {
+  repo_dir=$1
+  commit=$2
+  set --
+  while IFS= read -r p; do
+    if [ -n "$p" ]; then set -- "$@" "$p"; fi
+  done < "$tmp/excludes"
+  git -C "$repo_dir" -c core.quotePath=false --literal-pathspecs \
+    ls-tree -r --name-only "$commit" -- "$@" 2>/dev/null |
+    awk -v kef="$tmp/keeps" '
+      BEGIN { while ((getline k < kef) > 0) if (k != "") keep[k] = 1 }
+      { if (!($0 in keep)) print }'
+}
+
 # --- preconditions -----------------------------------------------------------
 
 git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || die "not a git repository: $repo"
@@ -79,24 +95,22 @@ bases=$(git -C "$repo" merge-base --all "$main" "$source") \
 base_count=$(printf '%s\n' "$bases" | awk 'NF { n++ } END { print n + 0 }')
 [ "$base_count" -eq 1 ] || die "expected exactly one merge base, found $base_count"
 base=$bases
-git -C "$repo" ls-tree -r --name-only "$base" > "$tmp/base-tree"
+base_left=$(nonkept_paths "$repo" "$base")
+[ -z "$base_left" ] \
+  || die "excluded path exists in the merge base: $(printf '%s\n' "$base_left" | head -n 1)"
 
+set --
 while IFS= read -r p; do
   [ -n "$p" ] || continue
-  if awk -v p="$p" '$0 == p || index($0, p "/") == 1 { found = 1 } END { exit !found }' \
-      "$tmp/base-tree"; then
-    die "excluded path exists in the merge base: $p"
+  set -- "$@" "$p"
+done < "$tmp/excludes"
+for sha in $(git -C "$repo" --literal-pathspecs rev-list "$main" -- "$@"); do
+  if git -C "$repo" merge-base --is-ancestor "$sha" "$source"; then
+    left=$(nonkept_paths "$repo" "$sha")
+    [ -z "$left" ] \
+      || die "commit $sha touching an excluded path is reachable from $source: $(printf '%s\n' "$left" | head -n 1)"
   fi
-done < "$tmp/excludes"
-
-while IFS= read -r p; do
-  [ -n "$p" ] || continue
-  for sha in $(git -C "$repo" rev-list "$main" -- "$p"); do
-    if git -C "$repo" merge-base --is-ancestor "$sha" "$source"; then
-      die "commit $sha touching $p is reachable from $source; refusing"
-    fi
-  done
-done < "$tmp/excludes"
+done
 
 # --- command generation ------------------------------------------------------
 
@@ -179,12 +193,11 @@ if [ "$mode" = execute ]; then
     fail_verify "git filter-repo failed"
   }
 
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
-    if [ -n "$(git -C "$filtered" rev-list "$main" -- "$p")" ]; then
-      fail_verify "excluded path still present in history: $p"
-    fi
-  done < "$tmp/excludes"
+  for sha in $(git -C "$filtered" rev-list "$main"); do
+    left=$(nonkept_paths "$filtered" "$sha")
+    [ -z "$left" ] \
+      || fail_verify "excluded path still present in commit $sha: $(printf '%s\n' "$left" | head -n 1)"
+  done
 
   git -C "$filtered" rev-parse --verify --quiet "refs/heads/$source" >/dev/null \
     || fail_verify "source branch missing in filtered clone"
@@ -195,8 +208,8 @@ if [ "$mode" = execute ]; then
     || fail_verify "merge base missing in filtered clone"
   [ "$filtered_base" = "$base" ] || fail_verify "merge base changed"
 
-  git -C "$backup" ls-tree -r --name-only "$main" > "$work/orig.txt"
-  git -C "$filtered" ls-tree -r --name-only "$main" > "$work/new.txt"
+  git -C "$backup" -c core.quotePath=false ls-tree -r --name-only "$main" > "$work/orig.txt"
+  git -C "$filtered" -c core.quotePath=false ls-tree -r --name-only "$main" > "$work/new.txt"
   awk -v exf="$tmp/excludes" -v kef="$tmp/keeps" '
     BEGIN {
       while ((getline line < exf) > 0) if (line != "") ex[++n] = line

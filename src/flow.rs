@@ -253,6 +253,12 @@ fn rollback(git: &Git, cur: &str, head0: &str, tmp: &str) -> anyhow::Result<()> 
             anyhow::bail!("回滚切回 {cur} 失败：{e}");
         }
     }
+    // The worktree was clean before the run, so any untracked file now was
+    // created during it (typically by a hook). Remove those without touching
+    // ignored files, which may legitimately pre-exist.
+    if let Err(e) = git.ok(git.run_str(&["clean", "-fd"])?) {
+        anyhow::bail!("回滚清理未跟踪文件失败：{e}；请手动执行 git clean -fd");
+    }
     let _ = git.run_str(&["branch", "-D", tmp]);
     Ok(())
 }
