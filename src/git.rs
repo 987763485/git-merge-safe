@@ -116,6 +116,162 @@ impl Git {
             )
         }
     }
+
+    pub fn rev_parse(&self, rev: &str) -> anyhow::Result<String> {
+        let out = self.ok(self.run_str(&["rev-parse", rev])?)?;
+        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    }
+
+    pub fn current_branch(&self) -> anyhow::Result<Option<String>> {
+        let out = self.run_str(&["symbolic-ref", "--short", "HEAD"])?;
+        if out.status.success() {
+            return Ok(Some(
+                String::from_utf8_lossy(&out.stdout).trim().to_string(),
+            ));
+        }
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        if stderr.contains("not a symbolic ref") {
+            Ok(None)
+        } else {
+            anyhow::bail!("git symbolic-ref 失败：{}", stderr.trim())
+        }
+    }
+
+    pub fn status_porcelain(&self) -> anyhow::Result<Vec<u8>> {
+        let out = self.ok(self.run_str(&[
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=normal",
+        ])?)?;
+        Ok(out.stdout)
+    }
+
+    pub fn count_merges(&self, rev: &str) -> anyhow::Result<u64> {
+        let out = self.ok(self.run_str(&["rev-list", "--count", "--merges", rev])?)?;
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        text.parse::<u64>()
+            .map_err(|e| anyhow::anyhow!("解析 rev-list 计数失败：{e}"))
+    }
+
+    pub fn is_ancestor(&self, ancestor: &str, descendant: &str) -> anyhow::Result<bool> {
+        let out = self.run_str(&["merge-base", "--is-ancestor", ancestor, descendant])?;
+        match out.status.code() {
+            Some(0) => Ok(true),
+            Some(1) => Ok(false),
+            _ => anyhow::bail!(
+                "git merge-base --is-ancestor 失败：{}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        }
+    }
+
+    pub fn merge_bases(&self, a: &str, b: &str) -> anyhow::Result<Vec<String>> {
+        let out = self.run_str(&["merge-base", "--all", a, b])?;
+        match out.status.code() {
+            Some(0) => Ok(String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()),
+            Some(1) => Ok(Vec::new()),
+            _ => anyhow::bail!(
+                "git merge-base 失败：{}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        }
+    }
+
+    pub fn ls_files_z(&self) -> anyhow::Result<Vec<Vec<u8>>> {
+        let out = self.ok(self.run_str(&["ls-files", "-z"])?)?;
+        Ok(split_nul(&out.stdout))
+    }
+
+    pub fn ls_files_stage_z(&self) -> anyhow::Result<Vec<(Vec<u8>, String)>> {
+        let out = self.ok(self.run_str(&["ls-files", "-s", "-z"])?)?;
+        let mut result = Vec::new();
+        for record in split_nul(&out.stdout) {
+            let tab = record
+                .iter()
+                .position(|&b| b == b'\t')
+                .ok_or_else(|| anyhow::anyhow!("无法解析 ls-files -s 输出"))?;
+            let meta = String::from_utf8_lossy(&record[..tab]);
+            let mode = meta.split_whitespace().next().unwrap_or("").to_string();
+            result.push((record[tab + 1..].to_vec(), mode));
+        }
+        Ok(result)
+    }
+
+    pub fn ls_tree_z(&self, rev: &str) -> anyhow::Result<Vec<Vec<u8>>> {
+        let out = self.ok(self.run_str(&["ls-tree", "-r", "-z", "--name-only", rev])?)?;
+        Ok(split_nul(&out.stdout))
+    }
+
+    pub fn show_file(&self, rev: &str, path: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        let spec = format!("{rev}:{path}");
+        let out = self.run_str(&["show", &spec])?;
+        if out.status.success() {
+            Ok(Some(out.stdout))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn diff_cached_is_empty(&self) -> anyhow::Result<bool> {
+        let out = self.run_str(&["diff", "--cached", "--quiet"])?;
+        match out.status.code() {
+            Some(0) => Ok(true),
+            Some(1) => Ok(false),
+            _ => anyhow::bail!(
+                "git diff --cached --quiet 失败：{}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        }
+    }
+
+    pub fn branch_exists(&self, name: &str) -> anyhow::Result<bool> {
+        let refname = format!("refs/heads/{name}");
+        let out = self.run_str(&["show-ref", "--verify", "--quiet", &refname])?;
+        match out.status.code() {
+            Some(0) => Ok(true),
+            Some(1) => Ok(false),
+            _ => anyhow::bail!(
+                "git show-ref 失败：{}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        }
+    }
+
+    pub fn in_progress_operation(&self) -> anyhow::Result<Option<String>> {
+        for name in ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD"] {
+            let out = self.run_str(&["rev-parse", "-q", "--verify", name])?;
+            if out.status.success() {
+                return Ok(Some(name.to_string()));
+            }
+            match out.status.code() {
+                Some(1) | Some(128) => {}
+                _ => {
+                    anyhow::bail!(
+                        "git rev-parse 失败：{}",
+                        String::from_utf8_lossy(&out.stderr).trim()
+                    )
+                }
+            }
+        }
+        for name in ["rebase-apply", "rebase-merge"] {
+            if self.abs_git_path(name)?.is_dir() {
+                return Ok(Some(name.to_string()));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn info_attributes_present(&self) -> anyhow::Result<bool> {
+        let path = self.abs_git_path("info/attributes")?;
+        Ok(std::fs::metadata(&path)
+            .map(|m| m.len() > 0)
+            .unwrap_or(false))
+    }
 }
 
 fn resolve(base: &Path, p: &str) -> PathBuf {
@@ -146,6 +302,26 @@ fn render_command(args: &[&OsStr]) -> String {
         s.push_str(&a.to_string_lossy());
     }
     s
+}
+
+pub fn split_nul(bytes: &[u8]) -> Vec<Vec<u8>> {
+    let mut out: Vec<Vec<u8>> = bytes.split(|&b| b == 0).map(|s| s.to_vec()).collect();
+    if out.last().map(|v| v.is_empty()).unwrap_or(false) {
+        out.pop();
+    }
+    out
+}
+
+pub fn parse_git_version(out: &str) -> Option<(u32, u32)> {
+    let token = out.split_whitespace().nth(2)?;
+    let mut parts = token.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    Some((major, minor))
+}
+
+pub fn version_supported(v: (u32, u32)) -> bool {
+    v >= (2, 30)
 }
 
 #[cfg(test)]
