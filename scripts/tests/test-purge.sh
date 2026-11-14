@@ -59,4 +59,32 @@ grep -q -- '--filename-callback' "$tmp/keep-plan"
 grep -q -- 'docs/index.html' "$tmp/keep-plan"
 grep -q -- 'refs/tags/v1' "$tmp/keep-plan"
 
-echo "task 1 tests passed"
+# execute with a no-op filter-repo must fail verification and not push
+make_repo "$tmp/noop" no
+mkdir -p "$tmp/stub"
+cat > "$tmp/stub/git-filter-repo" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$tmp/stub/git-filter-repo"
+src_before="$(git -C "$tmp/noop" rev-parse dev)"
+main_before="$(git -C "$tmp/noop" rev-parse main)"
+if PATH="$tmp/stub:$PATH" sh "$script" --repo "$tmp/noop" \
+    --exclude docs --exclude AGENTS.md --execute --push >"$tmp/exec" 2>&1; then
+  echo "expected verification failure"; cat "$tmp/exec"; exit 1
+fi
+grep -q 'FAIL' "$tmp/exec"
+grep -q 'not pushed\|未推送' "$tmp/exec"
+[ "$(git -C "$tmp/noop" rev-parse dev)" = "$src_before" ]
+[ "$(git -C "$tmp/noop" rev-parse main)" = "$main_before" ]
+
+# optional real end-to-end when git-filter-repo is installed
+if command -v git-filter-repo >/dev/null 2>&1; then
+  make_repo "$tmp/real" no
+  sh "$script" --repo "$tmp/real" --exclude docs --exclude AGENTS.md \
+    --execute >"$tmp/real-out" 2>&1 \
+    || { echo "real filter-repo execute failed"; cat "$tmp/real-out"; exit 1; }
+  grep -q 'verification passed' "$tmp/real-out"
+fi
+
+echo "purge tests passed"
