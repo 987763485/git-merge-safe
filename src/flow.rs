@@ -10,8 +10,25 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 pub fn run(ctx: Ctx, cli: &Cli, _lock: Lock) -> Result<()> {
-    execute(&ctx, cli).map_err(Failure::Git)
+    execute(&ctx, cli).map_err(|e| {
+        if e.downcast_ref::<SourceChanged>().is_some() {
+            Failure::Severe(e)
+        } else {
+            Failure::Git(e)
+        }
+    })
 }
+
+#[derive(Debug)]
+struct SourceChanged(String);
+
+impl std::fmt::Display for SourceChanged {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for SourceChanged {}
 
 enum Step {
     Done(Vec<Vec<u8>>),
@@ -44,7 +61,9 @@ fn execute(ctx: &Ctx, cli: &Cli) -> anyhow::Result<()> {
             git.ok(git.run_str(&["switch", &ctx.cur])?)?;
             let ff = git.ok(git.run_str(&["merge", "--ff-only", &tmp])?);
             if let Err(e) = ff {
-                eprintln!("[git-merge-safe] fast-forward 失败，已保留临时分支 {tmp}");
+                eprintln!(
+                    "[git-merge-safe] fast-forward 失败，已保留临时分支 {tmp}；main 未被本工具修改"
+                );
                 return Err(e);
             }
             let src_now = git.rev_parse(&ctx.src)?;
@@ -112,7 +131,14 @@ fn prepare(git: &Git, ctx: &Ctx, tmp: &str) -> anyhow::Result<Step> {
     let envs: Vec<(&str, &OsStr)> = vec![("GIT_ATTR_NOSYSTEM", OsStr::new("1"))];
     let out = git.run_with_input(&args, &[], &envs)?;
     if !out.status.success() {
-        eprintln!("{}", String::from_utf8_lossy(&out.stderr).trim_end());
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        if !stdout.trim().is_empty() {
+            eprintln!("{}", stdout.trim_end());
+        }
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        if !stderr.trim().is_empty() {
+            eprintln!("{}", stderr.trim_end());
+        }
         anyhow::bail!("git merge --squash 失败");
     }
 
@@ -238,7 +264,20 @@ fn rollback(git: &Git, cur: &str, head0: &str, tmp: &str) -> anyhow::Result<()> 
 
 fn verify_source(expected: &str, actual: &str) -> anyhow::Result<()> {
     if expected != actual {
-        anyhow::bail!("源分支 HEAD 发生变化（{expected} → {actual}）");
+        return Err(anyhow::Error::new(SourceChanged(format!(
+            "源分支 HEAD 发生变化（{expected} → {actual}）"
+        ))));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_change_is_detected() {
+        assert!(verify_source("a", "a").is_ok());
+        assert!(verify_source("a", "b").is_err());
+    }
 }
