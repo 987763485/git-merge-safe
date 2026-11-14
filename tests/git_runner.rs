@@ -59,3 +59,16 @@ fn abs_git_path_is_absolute() {
     assert!(p.is_absolute());
     assert!(p.ends_with("merge-safe.lock"));
 }
+
+#[test]
+fn large_stdin_does_not_deadlock() {
+    let (_repo, git) = repo_git();
+    let mut input = Vec::new();
+    for i in 0..4000u64 {
+        input.extend_from_slice(format!("{i:040x}\n").as_bytes());
+    }
+    let args = [OsStr::new("cat-file"), OsStr::new("--batch")];
+    let out = git.run_with_input(&args, &input, &[]).unwrap();
+    assert!(out.status.success());
+    assert!(out.stdout.len() > 64 * 1024);
+}

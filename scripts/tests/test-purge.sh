@@ -87,4 +87,32 @@ if command -v git-filter-repo >/dev/null 2>&1; then
   grep -q 'verification passed' "$tmp/real-out"
 fi
 
+# keep exception already present in the merge base must pass --check
+make_keep_repo() {
+  git init -q -b main "$1"
+  git -C "$1" config user.name T; git -C "$1" config user.email t@example.com
+  mkdir -p "$1/docs"
+  echo index > "$1/docs/index.html"
+  echo "docs/** merge=ours" > "$1/.gitattributes"
+  echo base > "$1/plain.txt"
+  git -C "$1" add -A; git -C "$1" commit -qm base
+  git -C "$1" checkout -qb dev
+  echo dev > "$1/dev.txt"; git -C "$1" add -A; git -C "$1" commit -qm dev
+  git -C "$1" checkout -q main
+  echo a > "$1/docs/a.md"; git -C "$1" add -A; git -C "$1" commit -qm "squash 1"
+}
+make_keep_repo "$tmp/keepbase"
+expect_ok sh "$script" --repo "$tmp/keepbase" --exclude docs --keep docs/index.html --check
+
+# a no-op rewrite with a keep path must fail on the non-kept path, not the kept one
+make_keep_repo "$tmp/keepnoop"
+if PATH="$tmp/stub:$PATH" sh "$script" --repo "$tmp/keepnoop" \
+    --exclude docs --keep docs/index.html --execute >"$tmp/keep-exec" 2>&1; then
+  echo "expected verification failure with keeps"; cat "$tmp/keep-exec"; exit 1
+fi
+grep -q 'docs/a.md' "$tmp/keep-exec"
+if grep -q 'excluded path still present in history: docs' "$tmp/keep-exec"; then
+  echo "verification did not apply keep exceptions"; cat "$tmp/keep-exec"; exit 1
+fi
+
 echo "purge tests passed"

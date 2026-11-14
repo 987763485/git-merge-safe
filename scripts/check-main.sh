@@ -18,26 +18,31 @@ if [ -s "$info" ]; then
   exit 2
 fi
 
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT INT TERM
+
+# Raw (unquoted) paths so non-ASCII and spaces compare against .gitattributes.
+{
+  git -c core.quotePath=false ls-tree -r --name-only "$branch"
+  git -c core.quotePath=false log --name-only --format= "$branch"
+} | awk 'NF' | sort -u > "$tmp/paths"
+
 noattrs=$(git rev-parse --git-path merge-safe/no-attributes)
-check() {
+while IFS= read -r p; do
+  if [ -n "$p" ]; then printf '%s\0' "$p"; fi
+done < "$tmp/paths" |
   GIT_ATTR_NOSYSTEM=1 git -c core.attributesFile="$noattrs" \
-    check-attr --cached --stdin -z merge --
-}
+    check-attr --cached --stdin -z merge -- > "$tmp/attrs" || {
+      echo "[check-main] check-attr 失败" >&2
+      exit 2
+    }
 
-paths=$(
-  {
-    git ls-tree -r --name-only "$branch"
-    git log --name-only --format= "$branch"
-  } | awk 'NF' | sort -u
-)
-
+tr '\0' '\n' < "$tmp/attrs" > "$tmp/attrs.txt"
 offenders=$(
-  printf '%s\n' "$paths" |
-    while IFS= read -r p; do
-      if [ -n "$p" ]; then printf '%s\0' "$p"; fi
-    done |
-    check | tr '\0' '\n' | paste - - - | awk '$3 == "ours" { print $1 }'
-) || true
+  while IFS= read -r path && IFS= read -r attr && IFS= read -r value; do
+    if [ "$value" = "ours" ]; then printf '%s\n' "$path"; fi
+  done < "$tmp/attrs.txt"
+)
 
 if [ -n "$offenders" ]; then
   echo "[check-main] 发现禁止路径出现在 $branch 的树或历史中:" >&2

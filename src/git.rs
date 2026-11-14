@@ -86,12 +86,21 @@ impl Git {
         }
 
         let mut child = cmd.spawn()?;
-        if !stdin.is_empty() {
-            if let Some(mut si) = child.stdin.take() {
-                si.write_all(stdin)?;
-            }
-        }
+        let writer = if stdin.is_empty() {
+            None
+        } else {
+            let mut pipe = child.stdin.take();
+            let data = stdin.to_vec();
+            Some(std::thread::spawn(move || {
+                if let Some(mut si) = pipe.take() {
+                    let _ = si.write_all(&data);
+                }
+            }))
+        };
         let out = child.wait_with_output()?;
+        if let Some(handle) = writer {
+            let _ = handle.join();
+        }
         if self.verbose {
             eprintln!(
                 "[git-merge-safe]   exit {}",

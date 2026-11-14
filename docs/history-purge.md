@@ -35,10 +35,10 @@ sh scripts/purge-main-history.sh --repo work.git \
 2. `main` 没有真正的合并提交（只接受线性历史）。
 3. `dev` 不是 `main` 的祖先。
 4. `main` 与 `dev` 恰好有一个共同起点。
-5. 共同起点的树里没有 `--exclude` 路径。
-6. 触及任一 `--exclude` 路径的 `main` 提交都不在 `dev` 上。
+5. 共同起点的树里没有命中 `--exclude` 且不是 `--keep` 例外的路径。
+6. 触及任一 `--exclude` 路径的 `main` 提交如果也在 `dev` 上，则该提交的树里同样没有非 `--keep` 的排除路径。
 
-第 5、6 条是「不影响 dev」的硬门槛：只要有一个包含禁止路径的提交与 dev 共享，就停止并人工评估。
+第 5、6 条是「不影响 dev」的硬门槛：只要有一个包含非例外禁止路径的提交与 dev 共享，就停止并人工评估。`--keep` 列出的文件不计入禁止集合。
 
 ## 3. 备份
 
@@ -81,7 +81,7 @@ sh scripts/purge-main-history.sh --repo work.git --exclude ... --keep docs/index
 
 | 验证 | 证明什么 |
 |---|---|
-| `rev-list main -- <exclude>` 为空 | 目标分支的任何提交里都没有禁止路径 |
+| 逐个检查 `main` 的每个提交：其树里没有非 `--keep` 的排除路径 | 目标分支的任何提交里都没有禁止路径，同时 `-merge` 例外被保留 |
 | `rev-parse dev` 与执行前相同 | 来源分支一个字节都没动 |
 | `merge-base main dev` 与执行前相同 | 共同起点未变，后续 squash 合并仍可用 |
 | 新 tip 的路径 = 备份 tip 的路径去掉排除项、保留 `--keep` 项 | 除禁止路径外内容完全一致 |
