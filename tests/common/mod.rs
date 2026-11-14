@@ -14,7 +14,9 @@ impl TestRepo {
         repo
     }
 
-    pub fn path(&self) -> &Path { self.dir.path() }
+    pub fn path(&self) -> &Path {
+        self.dir.path()
+    }
 
     pub fn git(&self, args: &[&str]) -> std::process::Output {
         std::process::Command::new("git")
@@ -46,9 +48,15 @@ impl TestRepo {
         self.git_ok(&["commit", "-q", "-m", msg]);
     }
 
-    pub fn checkout(&self, branch: &str) { self.git_ok(&["checkout", "-q", branch]); }
-    pub fn checkout_new(&self, branch: &str) { self.git_ok(&["checkout", "-q", "-b", branch]); }
-    pub fn rev(&self, rev: &str) -> String { self.git_ok(&["rev-parse", rev]) }
+    pub fn checkout(&self, branch: &str) {
+        self.git_ok(&["checkout", "-q", branch]);
+    }
+    pub fn checkout_new(&self, branch: &str) {
+        self.git_ok(&["checkout", "-q", "-b", branch]);
+    }
+    pub fn rev(&self, rev: &str) -> String {
+        self.git_ok(&["rev-parse", rev])
+    }
 
     pub fn bin(&self) -> assert_cmd::Command {
         let mut cmd = assert_cmd::Command::cargo_bin("git-merge-safe").unwrap();

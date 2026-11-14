@@ -116,7 +116,10 @@ fn ls_tree_and_show_file() {
     repo.checkout("main");
     let git = Git::discover_in(repo.path(), false).unwrap();
 
-    assert!(git.ls_tree_z("dev").unwrap().contains(&b"docs/a.md".to_vec()));
+    assert!(git
+        .ls_tree_z("dev")
+        .unwrap()
+        .contains(&b"docs/a.md".to_vec()));
     let attrs = git.show_file("dev", ".gitattributes").unwrap().unwrap();
     assert!(String::from_utf8_lossy(&attrs).contains("merge=ours"));
     assert!(git.show_file("dev", "missing").unwrap().is_none());
@@ -163,9 +166,6 @@ fn version_parsing() {
 
 #[test]
 fn nul_splitting() {
-    assert_eq!(
-        split_nul(b"a\0b\0"),
-        vec![b"a".to_vec(), b"b".to_vec()]
-    );
+    assert_eq!(split_nul(b"a\0b\0"), vec![b"a".to_vec(), b"b".to_vec()]);
     assert!(split_nul(b"").is_empty());
 }

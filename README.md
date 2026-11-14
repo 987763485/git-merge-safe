@@ -79,10 +79,10 @@ git merge-safe
 ```
 
 ```
-[git-merge-safe] 环境检查通过
-[git-merge-safe] 合并 dev 成功（临时分支，未改动 main）
-[git-merge-safe] 已从索引与工作区移除：docs/a.md, docs/b.md, AGENTS.md
-[git-merge-safe] 保留（-merge）：docs/index.html
+[git-merge-safe] 已从索引与工作区移除 3 个路径
+[git-merge-safe]   docs/a.md
+[git-merge-safe]   docs/b.md
+[git-merge-safe]   AGENTS.md
 [git-merge-safe] 已 fast-forward main 到 abc1234
 [git-merge-safe] 工作区干净；源分支 dev 未变动
 ```
@@ -167,6 +167,12 @@ rm -f "$(git rev-parse --git-path merge-safe.lock)"
 - 子目录中的 `.gitattributes` 新规则不参与本次合并前的冲突判定（合并后的判定仍然正确）。
 - 钩子照常执行；如果钩子把命中路径加回提交或在工作区留下文件，本次运行会回滚。
 - 进程被 SIGKILL 时无法自动回滚，见「中断恢复」。
+
+## 在 CI 中校验
+
+`scripts/check-main.sh [branch]`（默认 `main`）检查目标分支的 tip 树以及历史中出现过的所有路径；任何命中 `merge=ours` 的路径都会让它以退出码 1 失败并打印路径。它只读取当前索引里的 `.gitattributes`，不修改任何东西。
+
+把它放进 CI 的目标分支任务，可以挡住绕过 `git-merge-safe` 的直接合并。
 
 ## 参与贡献
 

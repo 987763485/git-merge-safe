@@ -243,7 +243,12 @@ impl Git {
     }
 
     pub fn in_progress_operation(&self) -> anyhow::Result<Option<String>> {
-        for name in ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD"] {
+        for name in [
+            "MERGE_HEAD",
+            "CHERRY_PICK_HEAD",
+            "REVERT_HEAD",
+            "REBASE_HEAD",
+        ] {
             let out = self.run_str(&["rev-parse", "-q", "--verify", name])?;
             if out.status.success() {
                 return Ok(Some(name.to_string()));
@@ -315,7 +320,8 @@ pub fn os_from_git_path(p: &[u8]) -> std::ffi::OsString {
     String::from_utf8_lossy(p).into_owned().into()
 }
 
-pub fn split_nul(bytes: &[u8]) -> Vec<Vec<u8>> {    let mut out: Vec<Vec<u8>> = bytes.split(|&b| b == 0).map(|s| s.to_vec()).collect();
+pub fn split_nul(bytes: &[u8]) -> Vec<Vec<u8>> {
+    let mut out: Vec<Vec<u8>> = bytes.split(|&b| b == 0).map(|s| s.to_vec()).collect();
     if out.last().map(|v| v.is_empty()).unwrap_or(false) {
         out.pop();
     }

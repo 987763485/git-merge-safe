@@ -16,7 +16,10 @@ fn stderr(out: &std::process::Output) -> String {
 #[test]
 fn basic_exclusion() {
     let repo = TestRepo::new();
-    repo.write(".gitattributes", "docs/** merge=ours\nAGENTS.md merge=ours\n");
+    repo.write(
+        ".gitattributes",
+        "docs/** merge=ours\nAGENTS.md merge=ours\n",
+    );
     repo.write("plain.txt", "base\n");
     repo.write("AGENTS.md", "v0\n");
     repo.commit_all("base");
@@ -46,7 +49,9 @@ fn basic_exclusion() {
         "dev-change\n"
     );
     assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[test]
@@ -128,7 +133,9 @@ fn all_changes_excluded_means_no_content() {
     assert!(stdout(&out).contains("无内容可提交"), "{}", stdout(&out));
     assert_eq!(repo.rev("HEAD"), head);
     assert!(!repo.path().join("docs").exists());
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[test]
@@ -149,7 +156,11 @@ fn repeat_run_reports_no_content() {
 
     let second = run(&repo);
     assert!(second.status.success(), "{}", stderr(&second));
-    assert!(stdout(&second).contains("无内容可提交"), "{}", stdout(&second));
+    assert!(
+        stdout(&second).contains("无内容可提交"),
+        "{}",
+        stdout(&second)
+    );
     assert_eq!(repo.rev("HEAD"), head_after_first);
 }
 

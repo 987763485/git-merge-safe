@@ -39,7 +39,11 @@ fn stdout(out: &std::process::Output) -> String {
 fn git_path(repo: &TestRepo, rel: &str) -> PathBuf {
     let p = repo.git_ok(&["rev-parse", "--git-path", rel]);
     let pb = PathBuf::from(&p);
-    if pb.is_absolute() { pb } else { repo.path().join(pb) }
+    if pb.is_absolute() {
+        pb
+    } else {
+        repo.path().join(pb)
+    }
 }
 
 #[test]
@@ -60,7 +64,9 @@ fn dry_run_lists_union_and_preserves_state() {
     assert_eq!(repo.rev("HEAD"), before_head);
     assert_eq!(repo.git_ok(&["ls-files", "-s"]), before_files);
     assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[test]
