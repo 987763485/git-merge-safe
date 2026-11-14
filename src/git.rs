@@ -304,8 +304,18 @@ fn render_command(args: &[&OsStr]) -> String {
     s
 }
 
-pub fn split_nul(bytes: &[u8]) -> Vec<Vec<u8>> {
-    let mut out: Vec<Vec<u8>> = bytes.split(|&b| b == 0).map(|s| s.to_vec()).collect();
+#[cfg(unix)]
+pub fn os_from_git_path(p: &[u8]) -> std::ffi::OsString {
+    use std::os::unix::ffi::OsStrExt;
+    std::ffi::OsStr::from_bytes(p).to_os_string()
+}
+
+#[cfg(not(unix))]
+pub fn os_from_git_path(p: &[u8]) -> std::ffi::OsString {
+    String::from_utf8_lossy(p).into_owned().into()
+}
+
+pub fn split_nul(bytes: &[u8]) -> Vec<Vec<u8>> {    let mut out: Vec<Vec<u8>> = bytes.split(|&b| b == 0).map(|s| s.to_vec()).collect();
     if out.last().map(|v| v.is_empty()).unwrap_or(false) {
         out.pop();
     }

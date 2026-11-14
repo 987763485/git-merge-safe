@@ -1,7 +1,8 @@
 use clap::Parser;
 use git_merge_safe::cli::Cli;
 use git_merge_safe::dry_run;
-use git_merge_safe::error::Result;
+use git_merge_safe::error::{Failure, Result};
+use git_merge_safe::flow;
 use git_merge_safe::preflight;
 
 fn main() {
@@ -16,9 +17,11 @@ fn main() {
 }
 
 fn run(cli: &Cli) -> Result<()> {
-    let (ctx, _lock) = preflight::check(cli, cli.dry_run)?;
+    let (ctx, lock) = preflight::check(cli, cli.dry_run)?;
     if cli.dry_run {
         dry_run::run(&ctx, cli)?;
+        return Ok(());
     }
-    Ok(())
+    let lock = lock.ok_or_else(|| Failure::Preflight(anyhow::anyhow!("内部错误：缺少排他锁")))?;
+    flow::run(ctx, cli, lock)
 }
