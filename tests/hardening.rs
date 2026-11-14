@@ -279,3 +279,27 @@ fn existing_lock_reports_its_path() {
     assert_eq!(out.status.code(), Some(1));
     assert!(stderr(&out).contains("merge-safe.lock"), "{}", stderr(&out));
 }
+
+#[test]
+fn literal_pathspec_metacharacters_are_not_globs() {
+    let repo = TestRepo::new();
+    repo.write(
+        ".gitattributes",
+        "a[[]1].md merge=ours\n:weird.txt merge=ours\n",
+    );
+    repo.write("a1.md", "keep\n");
+    repo.write("plain.txt", "p\n");
+    repo.commit_all("base");
+    repo.checkout_new("dev");
+    repo.write("a[1].md", "excluded\n");
+    repo.write(":weird.txt", "excluded\n");
+    repo.write("plain.txt", "p-dev\n");
+    repo.commit_all("dev");
+    repo.checkout("main");
+
+    let out = run(&repo);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(!repo.path().join("a[1].md").exists());
+    assert!(!repo.path().join(":weird.txt").exists());
+    assert!(repo.path().join("a1.md").exists());
+}

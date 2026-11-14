@@ -58,7 +58,17 @@ fn execute(ctx: &Ctx, cli: &Cli) -> anyhow::Result<()> {
         Step::Done(excluded) => {
             let src_now = git.rev_parse(&ctx.src)?;
             verify_source(&ctx.src_head0, &src_now)?;
-            git.ok(git.run_str(&["switch", &ctx.cur])?)?;
+            if let Err(e) = git.ok(git.run_str(&["switch", &ctx.cur])?) {
+                eprintln!(
+                    "[git-merge-safe] 切回 {} 失败：已保留临时分支 {}（合并结果）与 {} 的合并前位置 {}",
+                    ctx.cur, tmp, ctx.cur, ctx.head0
+                );
+                eprintln!(
+                    "[git-merge-safe] 恢复：git status；必要时 git branch -f {} {}，然后 git switch {} && git merge --ff-only {} && git branch -D {}",
+                    ctx.cur, ctx.head0, ctx.cur, tmp, tmp
+                );
+                return Err(e);
+            }
             let ff = git.ok(git.run_str(&["merge", "--ff-only", &tmp])?);
             if let Err(e) = ff {
                 eprintln!(
@@ -150,6 +160,7 @@ fn prepare(git: &Git, ctx: &Ctx, tmp: &str) -> anyhow::Result<Step> {
             &nul_list(&excluded),
         )?;
         let args: Vec<&OsStr> = vec![
+            OsStr::new("--literal-pathspecs"),
             OsStr::new("rm"),
             OsStr::new("-q"),
             OsStr::new("--cached"),

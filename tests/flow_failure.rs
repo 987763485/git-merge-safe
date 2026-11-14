@@ -244,3 +244,30 @@ fn source_branch_never_changes() {
     assert_eq!(run(&failure).status.code(), Some(2));
     assert_eq!(failure.rev("dev"), src);
 }
+
+#[cfg(unix)]
+#[test]
+fn failed_switch_back_keeps_temp_and_reports_recovery() {
+    let repo = TestRepo::new();
+    repo.write(".gitattributes", "docs/** merge=ours\n");
+    repo.write("plain.txt", "p\n");
+    repo.commit_all("base");
+    repo.checkout_new("dev");
+    repo.write("plain.txt", "p-dev\n");
+    repo.commit_all("dev");
+    repo.checkout("main");
+    write_hook(
+        &repo,
+        "post-commit",
+        "#!/bin/sh\ngit branch -D main >/dev/null 2>&1 || true\n",
+    );
+
+    let out = run(&repo);
+    assert_eq!(out.status.code(), Some(2));
+    let err = stderr(&out);
+    assert!(err.contains("merge-safe/tmp-"), "{err}");
+    assert!(err.contains("git merge --ff-only"), "{err}");
+    assert!(!repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
+}

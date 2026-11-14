@@ -161,6 +161,8 @@ rm -f "$(git rev-parse --git-path merge-safe.lock)"
 
 运行 `git status` 确认工作区与预期一致后再继续。
 
+如果输出提示「切回 `<branch>` 失败」，工具已保留临时分支与合并前的 `head0`；按提示依次恢复：`git branch -f <branch> <head0>`（分支被误删时）→ `git switch <branch>` → `git merge --ff-only <tmp>` → `git branch -D <tmp>`。
+
 ## 限制
 
 - 不支持对子模块（gitlink）路径做排除；命中时会报错并回滚。
