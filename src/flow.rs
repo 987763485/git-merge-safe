@@ -76,10 +76,7 @@ fn execute(ctx: &Ctx, cli: &Cli) -> anyhow::Result<()> {
             if !git.status_porcelain()?.is_empty() {
                 report::warn("合并后工作区不干净，请检查");
             }
-            report::info(&format!(
-                "已从索引与工作区移除 {} 个路径",
-                excluded.len()
-            ));
+            report::info(&format!("已从索引与工作区移除 {} 个路径", excluded.len()));
             for p in &excluded {
                 report::info(&format!("  {}", String::from_utf8_lossy(p)));
             }
@@ -250,9 +247,7 @@ fn unique_temp_branch(git: &Git) -> anyhow::Result<String> {
 fn rollback(git: &Git, cur: &str, head0: &str, tmp: &str) -> anyhow::Result<()> {
     if git.current_branch()?.as_deref() == Some(tmp) {
         if let Err(e) = git.ok(git.run_str(&["reset", "--hard", head0])?) {
-            anyhow::bail!(
-                "回滚失败：{e}；请手动执行 git reset --hard {head0} && git switch {cur}"
-            );
+            anyhow::bail!("回滚失败：{e}；请手动执行 git reset --hard {head0} && git switch {cur}");
         }
         if let Err(e) = git.ok(git.run_str(&["switch", cur])?) {
             anyhow::bail!("回滚切回 {cur} 失败：{e}");

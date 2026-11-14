@@ -27,10 +27,7 @@ fn run_inner(ctx: &Ctx) -> anyhow::Result<()> {
         println!("[git-merge-safe] 未配置排除规则");
     } else {
         for path in &excluded {
-            println!(
-                "[git-merge-safe] 将移除: {}",
-                String::from_utf8_lossy(path)
-            );
+            println!("[git-merge-safe] 将移除: {}", String::from_utf8_lossy(path));
         }
         println!(
             "[git-merge-safe] 共 {} 个路径（预览为超集，实际以合并结果为准）",

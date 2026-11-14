@@ -13,7 +13,11 @@ fn stderr(out: &std::process::Output) -> String {
 fn git_path(repo: &TestRepo, rel: &str) -> PathBuf {
     let p = repo.git_ok(&["rev-parse", "--git-path", rel]);
     let pb = PathBuf::from(&p);
-    if pb.is_absolute() { pb } else { repo.path().join(pb) }
+    if pb.is_absolute() {
+        pb
+    } else {
+        repo.path().join(pb)
+    }
 }
 
 fn conflict_fixture() -> TestRepo {
@@ -44,7 +48,9 @@ fn non_excluded_conflict_rolls_back() {
     assert_eq!(repo.git_ok(&["ls-files", "-s"]), index);
     assert_eq!(repo.rev("dev"), src);
     assert!(repo.git_ok(&["status", "--porcelain"]).is_empty());
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[test]
@@ -70,7 +76,9 @@ fn gitattributes_conflict_rolls_back() {
     let out = run(&repo);
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(repo.rev("HEAD"), head);
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[test]
@@ -118,7 +126,9 @@ fn gitlink_path_is_refused() {
     assert_eq!(out.status.code(), Some(2));
     assert!(stderr(&out).contains("子模块"), "{}", stderr(&out));
     assert_eq!(repo.rev("HEAD"), main_head);
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[cfg(unix)]
@@ -155,7 +165,9 @@ fn hook_readding_excluded_path_rolls_back() {
     assert_eq!(out.status.code(), Some(2));
     assert!(stderr(&out).contains("提交后校验"), "{}", stderr(&out));
     assert_eq!(repo.rev("HEAD"), head);
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[cfg(unix)]
@@ -178,7 +190,9 @@ fn hook_leaving_untracked_file_rolls_back() {
     assert!(stderr(&out).contains("工作区不干净"), "{}", stderr(&out));
     assert_eq!(repo.rev("HEAD"), head);
     assert_eq!(repo.git_ok(&["ls-files", "-s"]), index);
-    assert!(repo.git_ok(&["branch", "--list", "merge-safe/*"]).is_empty());
+    assert!(repo
+        .git_ok(&["branch", "--list", "merge-safe/*"])
+        .is_empty());
 }
 
 #[cfg(unix)]
@@ -200,7 +214,11 @@ fn fast_forward_race_keeps_temp_branch() {
 
     let out = run(&repo);
     assert_eq!(out.status.code(), Some(2));
-    assert!(stderr(&out).contains("fast-forward 失败"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("fast-forward 失败"),
+        "{}",
+        stderr(&out)
+    );
     let branches = repo.git_ok(&["branch", "--list", "merge-safe/*"]);
     assert!(!branches.is_empty(), "temp branch should be kept");
     assert!(stderr(&out).contains("merge-safe/tmp-"), "{}", stderr(&out));

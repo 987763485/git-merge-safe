@@ -56,10 +56,7 @@ fn check_inner(cli: &Cli, dry_run: bool) -> anyhow::Result<(Ctx, Option<Lock>)> 
     }
     let bases = git.merge_bases(&cur, &src)?;
     if bases.len() != 1 {
-        anyhow::bail!(
-            "当前分支与源分支的共同起点数量为 {}，应为 1",
-            bases.len()
-        );
+        anyhow::bail!("当前分支与源分支的共同起点数量为 {}，应为 1", bases.len());
     }
 
     let lock = if dry_run {

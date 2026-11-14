@@ -93,10 +93,8 @@ mod tests {
 
     #[test]
     fn parses_triples() {
-        let pairs = parse_check_attr_z(
-            b"a\0merge\0ours\0b\0merge\0unset\0c\0merge\0unspecified\0",
-        )
-        .unwrap();
+        let pairs = parse_check_attr_z(b"a\0merge\0ours\0b\0merge\0unset\0c\0merge\0unspecified\0")
+            .unwrap();
         assert_eq!(
             pairs,
             vec![

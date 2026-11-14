@@ -13,7 +13,11 @@ fn stderr(out: &std::process::Output) -> String {
 fn git_path(repo: &TestRepo, rel: &str) -> PathBuf {
     let p = repo.git_ok(&["rev-parse", "--git-path", rel]);
     let pb = PathBuf::from(&p);
-    if pb.is_absolute() { pb } else { repo.path().join(pb) }
+    if pb.is_absolute() {
+        pb
+    } else {
+        repo.path().join(pb)
+    }
 }
 
 fn basic_fixture() -> TestRepo {

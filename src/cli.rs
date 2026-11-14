@@ -1,7 +1,11 @@
 use clap::Parser;
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "git-merge-safe", version, about = "Squash-merge a branch without bringing excluded paths into the current branch")]
+#[command(
+    name = "git-merge-safe",
+    version,
+    about = "Squash-merge a branch without bringing excluded paths into the current branch"
+)]
 pub struct Cli {
     #[arg(long, default_value = "dev", value_name = "branch")]
     pub source: String,
